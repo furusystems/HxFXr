@@ -8,7 +8,6 @@ import flash.media.SoundChannel;
 import flash.utils.ByteArray;
 import flash.utils.Endian;
 import flash.Vector;
-import haxe.Timer;
 /**
  * SfxrSynth
  * 
@@ -44,26 +43,26 @@ class SfxrSynth
 	var _sound:Sound;							// Sound instance used to play the sound
 	var _channel:SoundChannel;					// SoundChannel instance of playing Sound
 	
-	var _mutation:Bool;						// If the current sound playing or caching is a mutation
+	var _mutation:Bool;							// If the current sound playing or caching is a mutation
 	
 	var _cachedWave:ByteArray;					// Cached wave data from a cacheSound() call
 	var _cachingNormal:Bool;					// If the synth is caching a normal sound
 	
 	var _cachingMutation:Int;					// Current caching ID
 	var _cachedMutation:ByteArray;				// Current caching wave data for mutation
-	var _cachedMutations:Vector<ByteArray>;	// Cached mutated wave data
+	var _cachedMutations:Vector<ByteArray>;		// Cached mutated wave data
 	var _cachedMutationsNum:Int;				// Float of cached mutations
 	var _cachedMutationAmount:Float;			// Amount to mutate during cache
 	
-	var _cachingAsync:Bool;					// If the synth is currently caching asynchronously
-	var _cacheTimePerFrame:Int;				// Maximum time allowed per frame to cache sound asynchronously
+	var _cachingAsync:Bool;						// If the synth is currently caching asynchronously
+	var _cacheTimePerFrame:Int;					// Maximum time allowed per frame to cache sound asynchronously
 	var _cachedCallback:Void->Void;				// Function to call when finished caching asynchronously
 	var _cacheTicker:Shape;						// Shape used for enterFrame event
 	
 	var _waveData:ByteArray;					// Full wave, read out in chuncks by the onSampleData method
 	var _waveDataPos:Int;						// Current position in the waveData
 	var _waveDataLength:Int;					// Float of bytes in the waveData
-	var _waveDataBytes:Int;					// Float of bytes to write to the soundcard
+	var _waveDataBytes:Int;						// Float of bytes to write to the soundcard
 	
 	var _original:SfxrParams;					// Copied properties for mutation base
 	
@@ -739,7 +738,7 @@ class SfxrSynth
 			{
 				_phaserOffset += _phaserDeltaOffset;
 				_phaserInt = Std.int(_phaserOffset);
-					 if(_phaserInt < 0) 	_phaserInt = -_phaserInt;
+				if(_phaserInt < 0) 	_phaserInt = -_phaserInt;
 				else if (_phaserInt > 1023) _phaserInt = 1023;
 			}
 			
@@ -788,8 +787,7 @@ class SfxrSynth
 				{
 					_lpFilterOldPos = _lpFilterPos;
 					_lpFilterCutoff *= _lpFilterDeltaCutoff;
-						 if(_lpFilterCutoff < 0.0) _lpFilterCutoff = 0.0;
-					else if(_lpFilterCutoff > 0.1) _lpFilterCutoff = 0.1;
+					_lpFilterCutoff = Math.max(0, Math.min(_lpFilterCutoff, 0.1));
 					
 					if(_lpFilterOn)
 					{
@@ -824,8 +822,7 @@ class SfxrSynth
 			_superSample = _masterVolume * _envelopeVolume * _superSample * 0.125;
 			
 			// Clipping if too loud
-				 if(_superSample > 1.0) 	_superSample = 1.0;
-			else if(_superSample < -1.0) 	_superSample = -1.0;
+			_superSample = Math.max( -1.0, Math.min(_superSample, 1.0));
 			
 			if(waveData)
 			{
@@ -891,7 +888,7 @@ class SfxrSynth
 		wav.endian = Endian.BIG_ENDIAN;
 		wav.writeUnsignedInt(0x52494646);		// Chunk ID "RIFF"
 		wav.endian = Endian.LITTLE_ENDIAN;
-		wav.writeUnsignedInt(filesize);			// Chunck Data Size
+		wav.writeUnsignedInt(filesize);			// Chunk Data Size
 		wav.endian = Endian.BIG_ENDIAN;
 		wav.writeUnsignedInt(0x57415645);		// RIFF Type "WAVE"
 		

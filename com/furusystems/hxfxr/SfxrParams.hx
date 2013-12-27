@@ -17,6 +17,8 @@ package com.furusystems.hxfxr;
  * limitations under the License.
  * 
  * @author Thomas Vian
+ * @author Andreas Rønning
+ * @author Tomas Pettersson
  */
 class SfxrParams
 {
