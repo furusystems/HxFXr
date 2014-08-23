@@ -177,35 +177,38 @@ class SfxrSynth
 	 */
 	public function play():Void
 	{
-		
-		if (_cachingAsync) return;
-		
-		stop();
-		
-		_mutation = false;
-		
-		if (_params.paramsDirty || _cachingNormal || _cachedWave==null) 
-		{
-			// Needs to cache new data
-			_cachedWave = new ByteArray();
-			_cachingNormal = true;
-			_waveData = null;
+		try{
+			if (_cachingAsync) return;
 			
-			reset(true);
+			stop();
+			
+			_mutation = false;
+			
+			if (_params.paramsDirty || _cachingNormal || _cachedWave==null) 
+			{
+				// Needs to cache new data
+				_cachedWave = new ByteArray();
+				_cachingNormal = true;
+				_waveData = null;
+				
+				reset(true);
+			}
+			else
+			{
+				// Play from cached data
+				_waveData = _cachedWave;
+				_waveData.position = 0;
+				_waveDataLength = _waveData.length;
+				_waveDataBytes = 24576;
+				_waveDataPos = 0; 
+			}
+			
+			if (_sound==null) (_sound = new Sound()).addEventListener(SampleDataEvent.SAMPLE_DATA, onSampleData);
+			
+			_channel = _sound.play();
+		}catch (e:Dynamic) {
+			trace("Audio error");
 		}
-		else
-		{
-			// Play from cached data
-			_waveData = _cachedWave;
-			_waveData.position = 0;
-			_waveDataLength = _waveData.length;
-			_waveDataBytes = 24576;
-			_waveDataPos = 0; 
-		}
-		
-		if (_sound==null) (_sound = new Sound()).addEventListener(SampleDataEvent.SAMPLE_DATA, onSampleData);
-		
-		_channel = _sound.play();
 	}
 	
 	/**
@@ -217,45 +220,49 @@ class SfxrSynth
 	 */
 	public function playMutated(mutationAmount:Float = 0.05, mutationsNum:Int = 15):Void
 	{
-		stop();
-		
-		if (_cachingAsync) return;
-		
-		_mutation = true;
-		
-		_cachedMutationsNum = mutationsNum;
-		
-		if (_params.paramsDirty || _cachedMutations==null) 
-		{
-			// New set of mutations
-			_cachedMutations = new Vector<ByteArray>();
-			_cachingMutation = 0;
-		}
-		
-		if (_cachingMutation != -1)
-		{
-			// Continuing caching new mutations
-			_cachedMutation = new ByteArray();
-			_cachedMutations[_cachingMutation] = _cachedMutation;
-			_waveData = null;
+		try{
+			stop();
 			
-			_original = _params.clone();
-			_params.mutate(mutationAmount);
-			reset(true);
+			if (_cachingAsync) return;
+			
+			_mutation = true;
+			
+			_cachedMutationsNum = mutationsNum;
+			
+			if (_params.paramsDirty || _cachedMutations==null) 
+			{
+				// New set of mutations
+				_cachedMutations = new Vector<ByteArray>();
+				_cachingMutation = 0;
+			}
+			
+			if (_cachingMutation != -1)
+			{
+				// Continuing caching new mutations
+				_cachedMutation = new ByteArray();
+				_cachedMutations[_cachingMutation] = _cachedMutation;
+				_waveData = null;
+				
+				_original = _params.clone();
+				_params.mutate(mutationAmount);
+				reset(true);
+			}
+			else
+			{
+				// Play from random cached mutation
+				_waveData = _cachedMutations[Math.floor(_cachedMutations.length * Math.random())];
+				_waveData.position = 0;
+				_waveDataLength = _waveData.length;
+				_waveDataBytes = 24576;
+				_waveDataPos = 0;
+			}
+			
+			if (_sound==null) (_sound = new Sound()).addEventListener(SampleDataEvent.SAMPLE_DATA, onSampleData);
+			
+			_channel = _sound.play();
+		}catch (e:Dynamic) {
+			
 		}
-		else
-		{
-			// Play from random cached mutation
-			_waveData = _cachedMutations[Std.int(_cachedMutations.length * Math.random())];
-			_waveData.position = 0;
-			_waveDataLength = _waveData.length;
-			_waveDataBytes = 24576;
-			_waveDataPos = 0;
-		}
-		
-		if (_sound==null) (_sound = new Sound()).addEventListener(SampleDataEvent.SAMPLE_DATA, onSampleData);
-		
-		_channel = _sound.play();
 	}
 	
 	/**
@@ -563,7 +570,7 @@ class SfxrSynth
 		_changeTime = 0;
 		
 		if(p.changeSpeed == 1.0) 	_changeLimit = 0;
-		else 						_changeLimit = Std.int((1.0 - p.changeSpeed) * (1.0 - p.changeSpeed) * 20000 + 32);
+		else 						_changeLimit = Math.floor((1.0 - p.changeSpeed) * (1.0 - p.changeSpeed) * 20000 + 32);
 		
 		if(totalReset)
 		{
@@ -638,7 +645,7 @@ class SfxrSynth
 			_repeatTime = 0;
 			
 			if (p.repeatSpeed == 0.0) 	_repeatLimit = 0;
-			else 						_repeatLimit = Std.int((1.0-p.repeatSpeed) * (1.0-p.repeatSpeed) * 20000) + 32;
+			else 						_repeatLimit = Math.floor((1.0-p.repeatSpeed) * (1.0-p.repeatSpeed) * 20000) + 32;
 		}
 	}
 	
@@ -701,7 +708,7 @@ class SfxrSynth
 				_periodTemp = _period * (1.0 + Math.sin(_vibratoPhase) * _vibratoAmplitude);
 			}
 			
-			_periodTemp = Std.int(_periodTemp);
+			_periodTemp = Math.floor(_periodTemp);
 			if(_periodTemp < 8) _periodTemp = 8;
 			
 			// Sweeps the square duty
@@ -737,7 +744,7 @@ class SfxrSynth
 			if (_phaser)
 			{
 				_phaserOffset += _phaserDeltaOffset;
-				_phaserInt = Std.int(_phaserOffset);
+				_phaserInt = Math.floor(_phaserOffset);
 				if(_phaserInt < 0) 	_phaserInt = -_phaserInt;
 				else if (_phaserInt > 1023) _phaserInt = 1023;
 			}
@@ -757,7 +764,7 @@ class SfxrSynth
 				_phase++;
 				if(_phase >= _periodTemp)
 				{
-					_phase = _phase - Std.int(_periodTemp);
+					_phase = _phase - Math.floor(_periodTemp);
 					
 					// Generates new random noise for this period
 					if(_waveType == 3) 
@@ -779,7 +786,7 @@ class SfxrSynth
 						_sample = _pos < 0 ? 1.27323954 * _pos + .405284735 * _pos * _pos : 1.27323954 * _pos - 0.405284735 * _pos * _pos;
 						_sample = _sample < 0 ? .225 * (_sample *-_sample - _sample) + _sample : .225 * (_sample * _sample - _sample) + _sample;
 					case 3: // Noise
-						_sample = _noiseBuffer[Std.int(_phase * 32 / Std.int(_periodTemp))];
+						_sample = _noiseBuffer[cast Math.min(Math.floor(_phase * 32 / Math.floor(_periodTemp)), _noiseBuffer.length - 1)];
 				}
 				
 				// Applies the low and high pass filters
@@ -842,8 +849,8 @@ class SfxrSynth
 					_bufferSample /= _sampleCount;
 					_sampleCount = 0;
 					
-					if(bitDepth == 16) 	buffer.writeShort(Std.int(32000.0 * _bufferSample));
-					else 				buffer.writeByte(Std.int(_bufferSample * 127 + 128));
+					if(bitDepth == 16) 	buffer.writeShort(Math.floor(32000.0 * _bufferSample));
+					else 				buffer.writeByte(Math.floor(_bufferSample * 127 + 128));
 					
 					_bufferSample = 0.0;
 				}
@@ -874,12 +881,12 @@ class SfxrSynth
 		if (sampleRate != 44100) sampleRate = 22050;
 		if (bitDepth != 16) bitDepth = 8;
 		
-		var soundLength:Int = Std.int(_envelopeFullLength);
+		var soundLength:Int = Math.floor(_envelopeFullLength);
 		if (bitDepth == 16) soundLength *= 2;
 		if (sampleRate == 22050) soundLength = cast soundLength * 0.5;
 		
 		var filesize:Int = 36 + soundLength;
-		var blockAlign:Int = Std.int(bitDepth / 8);
+		var blockAlign:Int = Math.floor(bitDepth / 8);
 		var bytesPerSec:Int = sampleRate * blockAlign;
 		
 		var wav:ByteArray = new ByteArray();
@@ -910,7 +917,7 @@ class SfxrSynth
 		wav.endian = Endian.LITTLE_ENDIAN;
 		wav.writeUnsignedInt(soundLength);		// Chunk Data Size
 		
-		synthWave(wav, Std.int(_envelopeFullLength), false, sampleRate, bitDepth);
+		synthWave(wav, Math.floor(_envelopeFullLength), false, sampleRate, bitDepth);
 		
 		wav.position = 0;
 		
